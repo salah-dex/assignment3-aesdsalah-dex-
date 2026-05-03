@@ -5,12 +5,27 @@
 set -e
 set -u
 
+# I need to update this script to work assignment 4 as well, 
+# so I will be adding some code to handle the differences between assignment 1 and assignment 4.
+# In assignment 4, the finder-test.sh script will run from buildroot filesystem, 
+# so I need to make sure that the script can find the writer.sh executable and the conf directory.
+# to achieve this, I will be using absolute paths for the writer.sh executable and the conf directory, and I will be using the $PWD variable to get the current working directory.
+
+
+ASSIGNMENT_DIR=$(dirname "$0")
+cd "$ASSIGNMENT_DIR"
+
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
-WRITEDIR=/tmp/aeld-data
-username=$(cat conf/username.txt)
-assignment=$(cat conf/assignment.txt)
+WRITEDIR=/tmp/assignment4-result.txt
+
+
+# Use absolute path for config files
+CONF_DIR=/etc/finder-app/conf
+username=$(cat "${CONF_DIR}/username.txt")
+assignment=$(cat "${CONF_DIR}/assignment.txt")
 executable="writer.sh"
+
 
 if [ $# -lt 3 ]
 then
