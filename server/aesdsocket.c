@@ -63,20 +63,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
     /* 1: open syslog */
     openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_USER);
     unlink(LOG_FILE); // Ensure log file is removed on startup
 
     /* Set up signal handlers for graceful shutdown */
-     // Setup signal handlers
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = signal_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     /*3: Set up server socket */
     server_socket = setup_server_socket(run_as_daemon);
@@ -202,9 +195,9 @@ static int setup_server_socket(bool run_as_daemon) {
         return -1;
     }
     
-    /*if(run_as_daemon) {
+    if(run_as_daemon) {
         daemonize();
-    }*/
+    }
     /* 5: Listen for connections */
     if (listen(sockfd, BACKLOG) < 0) {
         close(sockfd);
