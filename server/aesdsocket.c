@@ -79,6 +79,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    /* demonize */
+    if(run_as_daemon) {
+        daemonize();
+    }
+
     syslog(LOG_INFO, "Server started on port %d", PORT);
 
     /* 4: Main server loop to accept and handle client connections, this never returns unless an error occurs or shutdown is requested */
@@ -127,13 +132,15 @@ static void signal_handler(int signum) {
     /* Set the exit flag to indicate graceful shutdown 
      only on SIGINT and SIGTERM */
     if (signum == SIGINT || signum == SIGTERM) {
+
         exit_flag = 1;
+
+        if (server_socket != -1)
+        {
+            shutdown(server_socket, SHUT_RDWR);
+        }
     }
     
-
-    /*if (server_socket >= 0)
-        shutdown(server_socket, SHUT_RDWR);
-    }*/
 }
 
 static void cleanup() {
@@ -189,15 +196,21 @@ static int setup_server_socket(bool run_as_daemon) {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
+    /* Set socket options to allow reuse of address and port */
+    int optval = 1;
+
+    setsockopt(sockfd,
+               SOL_SOCKET,
+               SO_REUSEADDR,
+               &optval,
+               sizeof(optval));
+
     /* 4: Bind the socket to the address and port */
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         close(sockfd);
         return -1;
     }
     
-    if(run_as_daemon) {
-        daemonize();
-    }
     /* 5: Listen for connections */
     if (listen(sockfd, BACKLOG) < 0) {
         close(sockfd);
@@ -229,7 +242,13 @@ static int send_log_file_content(int client_socket) {
         while (total < bytes_read) {
             ssize_t sent = send(client_socket,buffer + total,bytes_read - total,0);
             if (sent <= 0)
-                 return -1;  
+            {
+                syslog(LOG_ERR, "Failed to send log file content: %s", strerror(errno));
+                close(log_fd);
+                pthread_mutex_unlock(&log_file_mutex);
+                return -1;
+            }
+                   
 
             total += sent;
         }
